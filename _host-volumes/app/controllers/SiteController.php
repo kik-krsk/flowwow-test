@@ -2,13 +2,12 @@
 
 namespace app\controllers;
 
-use Yii;
+use app\models\ContactForm;
+use app\models\LoginForm;
 use yii\filters\AccessControl;
+use yii\filters\VerbFilter;
 use yii\web\Controller;
 use yii\web\Response;
-use yii\filters\VerbFilter;
-use app\models\LoginForm;
-use app\models\ContactForm;
 
 class SiteController extends Controller
 {
@@ -57,11 +56,11 @@ class SiteController extends Controller
     /**
      * Displays homepage.
      *
-     * @return string
+     * @return Response
      */
     public function actionIndex()
     {
-        return $this->render('index');
+        return $this->asJson((new \app\components\openExchanges\Exchange())->getLastest());
     }
 
     /**
@@ -71,16 +70,17 @@ class SiteController extends Controller
      */
     public function actionLogin()
     {
-        if (!Yii::$app->user->isGuest) {
+        if (!\Yii::$app->user->isGuest) {
             return $this->goHome();
         }
 
         $model = new LoginForm();
-        if ($model->load(Yii::$app->request->post()) && $model->login()) {
+        if ($model->load(\Yii::$app->request->post()) && $model->login()) {
             return $this->goBack();
         }
 
         $model->password = '';
+
         return $this->render('login', [
             'model' => $model,
         ]);
@@ -93,7 +93,7 @@ class SiteController extends Controller
      */
     public function actionLogout()
     {
-        Yii::$app->user->logout();
+        \Yii::$app->user->logout();
 
         return $this->goHome();
     }
@@ -106,11 +106,12 @@ class SiteController extends Controller
     public function actionContact()
     {
         $model = new ContactForm();
-        if ($model->load(Yii::$app->request->post()) && $model->contact(Yii::$app->params['adminEmail'])) {
-            Yii::$app->session->setFlash('contactFormSubmitted');
+        if ($model->load(\Yii::$app->request->post()) && $model->contact(\Yii::$app->params['adminEmail'])) {
+            \Yii::$app->session->setFlash('contactFormSubmitted');
 
             return $this->refresh();
         }
+
         return $this->render('contact', [
             'model' => $model,
         ]);
