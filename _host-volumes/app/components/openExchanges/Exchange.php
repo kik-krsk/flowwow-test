@@ -47,12 +47,14 @@ class Exchange
             return $response->data;
         }
         \Yii::error($response->data, 'openexchanges');
-        match ($response->statusCode) {
-            HttpCode::NOT_FOUND => throw new \yii\web\NotFoundHttpException($response->data['message']),
-            HttpCode::UNAUTHORIZED => throw new \yii\web\UnauthorizedHttpException($response->data['message']),
-            HttpCode::TOO_MANY_REQUESTS => throw new \yii\web\MethodNotAllowedHttpException($response->data['message']),
-            HttpCode::FORBIDDEN => throw new \yii\web\ForbiddenHttpException($response->data['message']),
-            HttpCode::BAD_REQUEST => throw new \yii\web\BadRequestHttpException($response->data['message']),
+        $data = $response->data;
+        /** @var \app\components\openExchanges\dto\ErrorDto $data */
+        match ((int)$response->statusCode) {
+            HttpCode::NOT_FOUND => throw new \yii\web\NotFoundHttpException($data->description),
+            HttpCode::UNAUTHORIZED => throw new \yii\web\UnauthorizedHttpException($data->description),
+            HttpCode::TOO_MANY_REQUESTS => throw new \yii\web\MethodNotAllowedHttpException($data->description),
+            HttpCode::FORBIDDEN => throw new \yii\web\ForbiddenHttpException($data->description),
+            HttpCode::BAD_REQUEST => throw new \yii\web\BadRequestHttpException($data->description),
             default => throw new \yii\web\HttpException('Unknown status code: ' . $response->statusCode),
         };
     }

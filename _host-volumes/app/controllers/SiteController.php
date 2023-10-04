@@ -54,13 +54,17 @@ class SiteController extends Controller
     }
 
     /**
-     * Displays homepage.
      *
      * @return Response
      */
-    public function actionIndex()
+    public function actionIndex(): Response
     {
-        return $this->asJson((new \app\components\openExchanges\Exchange())->getLastest());
+        try {
+            $latest = (new \app\components\openExchanges\Exchange())->getLastest();
+            return $this->asJson(['success' => true, 'data' => $latest]);
+        } catch (\yii\web\HttpException $e) {
+            return $this->asJson(['success' => false, 'message' => $e->getMessage()]);
+        }
     }
 
     /**
