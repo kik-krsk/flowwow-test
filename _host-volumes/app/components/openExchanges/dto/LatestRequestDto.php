@@ -1,8 +1,9 @@
 <?php
 
 namespace app\components\openExchanges\dto;
+use app\components\openExchanges\dto\AbstractDto;
 
-class LatestDto
+class LatestRequestDto extends AbstractDto
 {
     public string $disclaimer;
     public string $license;

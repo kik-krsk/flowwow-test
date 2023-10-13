@@ -2,7 +2,7 @@
 
 namespace app\components\openExchanges\dto;
 
-class ErrorDto
+class ErrorDto extends AbstractDto
 {
     public bool $error;
     public int $status;

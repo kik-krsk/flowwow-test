@@ -2,83 +2,81 @@
 
 namespace app\components\openExchanges;
 
-use app\components\openExchanges\dto\LatestDto;
+use app\components\openExchanges\dto\ErrorDto;
+use app\components\openExchanges\dto\LatestRequestDto;
+use app\components\openExchanges\dto\LatestResponseDto;
+use app\components\openExchanges\dto\ResponseDto;
 use Codeception\Util\HttpCode;
 use yii\base\InvalidConfigException;
 use yii\httpclient\Exception;
 
 class Exchange
 {
-    protected ?Client $client;
+    public function __construct(protected Client $client = new Client()) {}
 
-    public function __construct(?Client $client = null)
+    /** /latest.json.
+     * @see https://docs.openexchangerates.org/reference/latest-json
+     *
+     * @param ?LatestResponseDto $latestResponseDto
+     *
+     * @return LatestRequestDto
+     *
+     * @throws InvalidConfigException
+     * @throws Exception
+     */
+    public function getLastest(?LatestResponseDto $latestResponseDto = null): LatestRequestDto
     {
-        $this->client = $client ?? new Client();
+        $data = [];
+        if ($latestResponseDto) {
+            $data['base'] = $latestResponseDto->base;
+            $data['symbols'] = $latestResponseDto->symbols;
+            $data['prettyprint'] = $latestResponseDto->prettyPrint;
+            $data['show_alternative'] = $latestResponseDto->showAlternative;
+        }
+        $responseDto = new ResponseDto();
+        $responseDto->url = 'latest.json';
+        $responseDto->data = array_filter($data);
+
+        $requestResult = $this->getData($responseDto);
+
+        return new LatestRequestDto($requestResult);
     }
 
     /**
-     * @param string $method
-     * @param string $url
-     * @param array  $data
-     * @param array  $headers
-     * @param array  $options
+     * @param ResponseDto $responseDto
      *
      * @return mixed
      *
      * @throws InvalidConfigException
      * @throws Exception
      */
-    public function getData(string $method = 'GET', string $url, array $data = [], array $headers = [], array $options = [])
+    protected function getData(ResponseDto $responseDto)
     {
         $request = $this->client->createRequest()
-            ->setMethod($method)
-            ->setUrl($url);
-        if (!empty($data)) {
-            $request->setData($data);
+            ->setMethod($responseDto->method)
+            ->setUrl($responseDto->url);
+        if (!empty($responseDto->data)) {
+            $request->setData($responseDto->data);
         }
-        if (!empty($headers)) {
-            $request->setHeaders($data);
+        if (!empty($responseDto->headers)) {
+            $request->setHeaders($responseDto->headers);
         }
-        if (!empty($options)) {
-            $request->setOptions($options);
+        if (!empty($responseDto->options)) {
+            $request->setOptions($responseDto->options);
         }
         $response = $request->send();
         if ($response->isOk) {
             return $response->data;
         }
-        \Yii::error($response->data, 'openexchanges');
-        $data = $response->data;
-        /** @var \app\components\openExchanges\dto\ErrorDto $data */
-        match ((int)$response->statusCode) {
-            HttpCode::NOT_FOUND => throw new \yii\web\NotFoundHttpException($data->description),
-            HttpCode::UNAUTHORIZED => throw new \yii\web\UnauthorizedHttpException($data->description),
-            HttpCode::TOO_MANY_REQUESTS => throw new \yii\web\MethodNotAllowedHttpException($data->description),
-            HttpCode::FORBIDDEN => throw new \yii\web\ForbiddenHttpException($data->description),
-            HttpCode::BAD_REQUEST => throw new \yii\web\BadRequestHttpException($data->description),
+        \Yii::error(var_export($response->data, true), 'openexchanges');
+        $responseData = new ErrorDto($response->data);
+        match ((int) $response->statusCode) {
+            HttpCode::NOT_FOUND => throw new \yii\web\NotFoundHttpException($responseData->description),
+            HttpCode::UNAUTHORIZED => throw new \yii\web\UnauthorizedHttpException($responseData->description),
+            HttpCode::TOO_MANY_REQUESTS => throw new \yii\web\MethodNotAllowedHttpException($responseData->description),
+            HttpCode::FORBIDDEN => throw new \yii\web\ForbiddenHttpException($responseData->description),
+            HttpCode::BAD_REQUEST => throw new \yii\web\BadRequestHttpException($responseData->description),
             default => throw new \yii\web\HttpException('Unknown status code: ' . $response->statusCode),
         };
-    }
-
-    /** /latest.json.
-     * @see https://docs.openexchangerates.org/reference/latest-json
-     *
-     * @param null|string $base
-     * @param null|string $symbols
-     * @param null|bool   $prettyPrint
-     * @param null|bool   $showAlternative
-     *
-     * @return LatestDto
-     *
-     * @throws InvalidConfigException
-     * @throws Exception
-     */
-    public function getLastest(?string $base = null, ?string $symbols = null, ?bool $prettyPrint = null, ?bool $showAlternative = null)
-    {
-        $data['base'] = $base;
-        $data['symbols'] = $symbols;
-        $data['prettyprint'] = $prettyPrint;
-        $data['show_alternative'] = $showAlternative;
-
-        return $this->getData('GET', 'latest.json', array_filter($data));
     }
 }
